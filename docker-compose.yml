@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+    mysql-db:
+        image: mysql:8.0
+        container_name: mysql_container
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: admin
+            MYSQL_DATABASE: dbdevel
+        ports:
+            - "3306:3306"
+        cap_add:
+            - SYS_NICE # Desabilitar o aviso "mbind: Operation not permitted"
