@@ -1,5 +1,7 @@
 import { Router } from "express";
+import multer from "multer";
 import { UserControlle } from "./controllers/Users";
+import { config } from "../multer";
 
 export const routes = Router();
 

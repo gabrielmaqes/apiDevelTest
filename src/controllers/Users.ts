@@ -1,7 +1,11 @@
 import { Response, Request } from "express";
 import { getRepository } from "typeorm";
 import { v4 as uuid } from "uuid";
+import multer from "multer";
+import fs from "fs";
+
 import { User } from "../entity/User";
+import { config } from "../../multer";
 
 export const UserControlle = {
     async getUsers(request: Request, response: Response) {
@@ -12,53 +16,93 @@ export const UserControlle = {
     },
 
     async createUser(request: Request, response: Response) {
-        const userRepository = getRepository(User);
-        const { name, birthDate, photo_uri } = request.body;
+        const idUser = uuid();
+        const upload = multer(config(idUser)).single("photo_uri");
 
-        const userData = new User();
-        userData.id = uuid();
-        userData.name = name;
-        userData.birthDate = birthDate;
-        userData.photo_uri = photo_uri;
+        upload(request, response, async function (err) {
+            if (err instanceof multer.MulterError) {
+                response.status(500).json({ error: 1, payload: err });
+            } else if (err) {
+                response.status(500).json({
+                    error: 1,
+                    payload: err,
+                    message: "Falha ao armazenar imagem.",
+                });
+            }
 
-        console.log(userData);
+            const userRepository = getRepository(User);
+            const { name, birthDate } = request.body;
+            const image = request.file;
 
-        try {
-            await userRepository.save(userData);
-        } catch (err) {
-            return response
-                .status(500)
-                .json({ message: "Falha ao cadastrar usuário!" });
-        }
+            const userData = new User();
+            userData.id = idUser;
+            userData.name = name;
+            userData.birthDate = birthDate;
+            userData.photo_uri = `uploads/${image!.filename}`;
 
-        return response
-            .status(201)
-            .json({ message: "Usuário cadastrado com sucesso!" });
+            try {
+                await userRepository.save(userData);
+            } catch (err) {
+                return response.status(500).json({
+                    message: "Falha ao cadastrar usuário!",
+                    error: err,
+                });
+            }
+
+            return response.status(201).json({
+                message: "Usuário cadastrado com sucesso!",
+                payload: { id: image?.filename, url: image },
+            });
+        });
     },
 
     async updateUser(request: Request, response: Response) {
-        const userRepository = getRepository(User);
         const { id } = request.params;
-        const userData = request.body;
+        const userRepository = getRepository(User);
+        const user = await userRepository.find({ where: { id: id } });
+        if (user.length) {
+            const upload = multer(config(id)).single("photo_uri");
 
-        try {
-            await userRepository.update(id, userData);
-        } catch (err) {
+            upload(request, response, async function (err) {
+                if (err instanceof multer.MulterError) {
+                    response.status(500).json({ error: 1, payload: err });
+                } else if (err) {
+                    response.status(500).json({
+                        error: 1,
+                        payload: err,
+                        message: "Erro não identificado",
+                    });
+                }
+                const { name, birthDate } = request.body;
+
+                try {
+                    await userRepository.update(id, { name, birthDate });
+                } catch (err) {
+                    return response
+                        .status(500)
+                        .json({ message: "Falha ao atualizar usuário!" });
+                }
+
+                return response
+                    .status(201)
+                    .json({ message: "Usuário atualizado com sucesso!" });
+            });
+        } else {
             return response
-                .status(500)
-                .json({ message: "Falha ao atualizar usuário!" });
+                .status(404)
+                .json({ message: "Usuário não encontrado na base de dados!" });
         }
-
-        return response
-            .status(201)
-            .json({ message: "Usuário atualizado com sucesso!" });
     },
 
     async deleteUser(request: Request, response: Response) {
         const userRepository = getRepository(User);
         const { id } = request.params;
 
+        const user = await userRepository.find({ where: { id: id } });
+        const path = user[0].photo_uri;
+
         try {
+            fs.unlinkSync(path);
             await userRepository.delete(id);
         } catch (err) {
             return response
