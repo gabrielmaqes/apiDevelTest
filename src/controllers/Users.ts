@@ -37,12 +37,12 @@ export const UserControlle = {
             const image = request.file;
 
             const userData = new User();
-            userData.id = idUser;
-            userData.name = name;
-            userData.birthDate = birthDate;
-            userData.photo_uri = `uploads/${image!.filename}`;
 
             try {
+                userData.id = idUser;
+                userData.name = name;
+                userData.birthDate = birthDate;
+                userData.photo_uri = `uploads/${image!.filename}`;
                 await userRepository.save(userData);
             } catch (err) {
                 return response.status(500).json({
