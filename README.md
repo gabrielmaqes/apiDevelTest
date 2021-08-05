@@ -1,5 +1,5 @@
 # apiDevelTest
-API implementada como parte do teste técnico em processo seletivo da DevelCode
+API implemented as part of DevelCode's selective process technical testing
 
 <h2 id="intro">:checkered_flag: How to run</h2>
 <p>
